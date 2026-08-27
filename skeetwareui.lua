@@ -58,34 +58,34 @@ local Library = {
 	ConfigFolder = "SkeetwareUI",
 	NotificationsEnabled = true,
 	Theme = {
-		Accent       = Color3.fromRGB(0, 240, 255),
-		AccentDark   = Color3.fromRGB(0, 140, 190),
-		Background   = Color3.fromRGB(11, 13, 20),
-		BackgroundAlt= Color3.fromRGB(15, 17, 27),
-		Gradient1    = Color3.fromRGB(16, 20, 40),   -- dark blue
-		Gradient2    = Color3.fromRGB(22, 12, 34),   -- dark purple
-		Panel        = Color3.fromRGB(20, 22, 33),
-		Element      = Color3.fromRGB(29, 32, 46),
-		ElementHover = Color3.fromRGB(38, 42, 60),
-		Border       = Color3.fromRGB(45, 49, 70),
-		Text         = Color3.fromRGB(234, 238, 246),
-		TextDim      = Color3.fromRGB(134, 142, 165),
-		Risky        = Color3.fromRGB(255, 80, 110),
-		Good         = Color3.fromRGB(70, 230, 150),
-		Font         = Enum.Font.GothamMedium,
-		FontBold     = Enum.Font.GothamBold,
-		TextSize     = 13,
+		Accent       = Color3.fromRGB(122, 106, 214),
+		AccentDark   = Color3.fromRGB(84, 72, 152),
+		Background   = Color3.fromRGB(18, 18, 18),
+		BackgroundAlt= Color3.fromRGB(22, 22, 22),
+		Gradient1    = Color3.fromRGB(26, 26, 26),
+		Gradient2    = Color3.fromRGB(24, 24, 24),
+		Panel        = Color3.fromRGB(26, 26, 26),
+		Element      = Color3.fromRGB(33, 33, 33),
+		ElementHover = Color3.fromRGB(41, 41, 41),
+		Border       = Color3.fromRGB(10, 10, 10),
+		Text         = Color3.fromRGB(202, 202, 202),
+		TextDim      = Color3.fromRGB(122, 122, 122),
+		Risky        = Color3.fromRGB(196, 76, 76),
+		Good         = Color3.fromRGB(120, 176, 96),
+		Font         = Enum.Font.Arial,
+		FontBold     = Enum.Font.ArialBold,
+		TextSize     = 12,
 		-- Spacing scale (used across every container for consistent padding).
-		PadOuter     = 16,
-		PadInner     = 12,
-		GapRow       = 8,
-		GapBox       = 12,
+		PadOuter     = 8,
+		PadInner     = 6,
+		GapRow       = 4,
+		GapBox       = 6,
 	},
 	-- Built-in icon set (Roblox asset ids) so tabs/groupboxes/buttons can use
 	-- icons without hunting for asset ids: Library.Icons.Target etc.
 	Icons = {
 		Target    = "rbxassetid://10709790644",
-		Crosshair = "rbxassetid://10723345699",
+		Crosshair = "rbxassetid://10709791437",
 		Eye       = "rbxassetid://10723346959",
 		Users     = "rbxassetid://10747373176",
 		Globe     = "rbxassetid://10723383029",
@@ -93,9 +93,9 @@ local Library = {
 		Sliders   = "rbxassetid://10734898355",
 		Settings  = "rbxassetid://10734950020",
 		Palette   = "rbxassetid://10723415903",
-		Save      = "rbxassetid://10734898355",
-		Download  = "rbxassetid://10723346959",
-		Trash     = "rbxassetid://10747373176",
+		Save      = "rbxassetid://10723379320",
+		Download  = "rbxassetid://10723345981",
+		Trash     = "rbxassetid://10747384394",
 		Refresh   = "rbxassetid://10734947940",
 		Power     = "rbxassetid://10723388177",
 		Zap       = "rbxassetid://10723434711",
@@ -142,8 +142,10 @@ function Util.Create(class, props, children)
 end
 local New = Util.Create
 
+-- Cheat menus are sharp-cornered: clamp every radius to a hard 2px max.
 function Util.Corner(radius, parent)
-	return New("UICorner", { CornerRadius = UDim.new(0, radius or 6), Parent = parent })
+	local r = math.min(radius or 3, 3)
+	return New("UICorner", { CornerRadius = UDim.new(0, r), Parent = parent })
 end
 
 function Util.Stroke(parent, color, thickness, transparency)
@@ -175,21 +177,9 @@ function Util.List(parent, pad, dir)
 	})
 end
 
--- Glass-morphism: layered translucent fill + soft gradient + inner stroke.
+-- Flat fill (no frosted-glass gradient; real cheat UIs are opaque and flat).
 function Util.Glass(inst, alpha)
-	inst.BackgroundTransparency = alpha or 0.25
-	New("UIGradient", {
-		Rotation = 90,
-		Color = ColorSequence.new({
-			ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 255, 255)),
-			ColorSequenceKeypoint.new(1, Color3.fromRGB(190, 200, 230)),
-		}),
-		Transparency = NumberSequence.new({
-			NumberSequenceKeypoint.new(0, 0.86),
-			NumberSequenceKeypoint.new(1, 0.96),
-		}),
-		Parent = inst,
-	})
+	inst.BackgroundTransparency = 1
 	return inst
 end
 
@@ -199,36 +189,29 @@ function Util.Shadow(parent, size, transparency)
 		BackgroundTransparency = 1,
 		Image = "rbxassetid://6014261993",
 		ImageColor3 = Color3.fromRGB(0, 0, 0),
-		ImageTransparency = transparency or 0.45,
+		ImageTransparency = 0.75,
 		ScaleType = Enum.ScaleType.Slice,
 		SliceCenter = Rect.new(49, 49, 450, 450),
 		AnchorPoint = Vector2.new(0.5, 0.5),
 		Position = UDim2.fromScale(0.5, 0.5),
-		Size = UDim2.new(1, size or 40, 1, size or 40),
+		Size = UDim2.new(1, 10, 1, 10),
 		ZIndex = 0,
 		Parent = parent,
 	})
 	return s
 end
 
--- Subtle neon glow around interactive elements.
+-- Neon glow disabled: kept as a stub so call sites stay valid.
 function Util.Glow(parent, color, transparency)
-	local g = New("ImageLabel", {
+	return New("ImageLabel", {
 		Name = "Glow",
 		BackgroundTransparency = 1,
-		Image = "rbxassetid://6014261993",
-		ImageColor3 = color or Library.Theme.Accent,
-		ImageTransparency = transparency == nil and 0.75 or transparency,
-		ScaleType = Enum.ScaleType.Slice,
-		SliceCenter = Rect.new(49, 49, 450, 450),
-		AnchorPoint = Vector2.new(0.5, 0.5),
-		Position = UDim2.fromScale(0.5, 0.5),
-		Size = UDim2.new(1, 22, 1, 22),
+		ImageTransparency = 1,
+		Visible = false,
+		Size = UDim2.fromScale(1, 1),
 		ZIndex = 0,
 		Parent = parent,
 	})
-	Library:RegisterThemed(g, "ImageColor3", "Accent")
-	return g
 end
 
 function Util.Gradient(parent, c1, c2, rotation)
