@@ -62,8 +62,8 @@ local Library = {
 		AccentDark   = Color3.fromRGB(84, 72, 152),
 		Background   = Color3.fromRGB(18, 18, 18),
 		BackgroundAlt= Color3.fromRGB(22, 22, 22),
-		Gradient1    = Color3.fromRGB(26, 26, 26),
-		Gradient2    = Color3.fromRGB(24, 24, 24),
+		Gradient1    = Color3.fromRGB(36, 36, 38),
+		Gradient2    = Color3.fromRGB(18, 18, 19),
 		Panel        = Color3.fromRGB(26, 26, 26),
 		Element      = Color3.fromRGB(33, 33, 33),
 		ElementHover = Color3.fromRGB(41, 41, 41),
@@ -84,22 +84,29 @@ local Library = {
 	-- Built-in icon set (Roblox asset ids) so tabs/groupboxes/buttons can use
 	-- icons without hunting for asset ids: Library.Icons.Target etc.
 	Icons = {
-		Target    = "rbxassetid://10709790644",
-		Crosshair = "rbxassetid://10709791437",
+		Target    = "rbxassetid://10734977012",
+		Crosshair = "rbxassetid://10709818534",
 		Eye       = "rbxassetid://10723346959",
-		Users     = "rbxassetid://10747373176",
-		Globe     = "rbxassetid://10723383029",
-		Shield    = "rbxassetid://10747370665",
-		Sliders   = "rbxassetid://10734898355",
-		Settings  = "rbxassetid://10734950020",
-		Palette   = "rbxassetid://10723415903",
-		Save      = "rbxassetid://10723379320",
-		Download  = "rbxassetid://10723345981",
-		Trash     = "rbxassetid://10747384394",
-		Refresh   = "rbxassetid://10734947940",
-		Power     = "rbxassetid://10723388177",
-		Zap       = "rbxassetid://10723434711",
+		Users     = "rbxassetid://10747373426",
+		User      = "rbxassetid://10747373176",
+		Globe     = "rbxassetid://10723404337",
+		Shield    = "rbxassetid://10734951847",
+		Sliders   = "rbxassetid://10734963400",
+		Settings  = "rbxassetid://10734950309",
+		Palette   = "rbxassetid://10734910430",
+		Save      = "rbxassetid://10734941499",
+		Download  = "rbxassetid://10723344270",
+		Trash     = "rbxassetid://10747362241",
+		Refresh   = "rbxassetid://10734933222",
+		Power     = "rbxassetid://10734930466",
+		Zap       = "rbxassetid://10723376114",
 		Search    = "rbxassetid://10734943674",
+		Folder    = "rbxassetid://10723387563",
+		Skull     = "rbxassetid://10734962068",
+		Swords    = "rbxassetid://10734975692",
+		Monitor   = "rbxassetid://10734896881",
+		Wrench    = "rbxassetid://10747383470",
+		Cursor    = "rbxassetid://10734898476",
 	},
 }
 Library.__index = Library
@@ -142,10 +149,9 @@ function Util.Create(class, props, children)
 end
 local New = Util.Create
 
--- Cheat menus are sharp-cornered: clamp every radius to a hard 2px max.
+-- Skeetware is 100% square: every corner is hard, no exceptions.
 function Util.Corner(radius, parent)
-	local r = math.min(radius or 3, 3)
-	return New("UICorner", { CornerRadius = UDim.new(0, r), Parent = parent })
+	return New("UICorner", { CornerRadius = UDim.new(0, 0), Parent = parent })
 end
 
 function Util.Stroke(parent, color, thickness, transparency)
@@ -216,12 +222,31 @@ end
 
 function Util.Gradient(parent, c1, c2, rotation)
 	local g = New("UIGradient", {
-		Rotation = rotation or 45,
+		Rotation = rotation or 90,
 		Color = ColorSequence.new(c1 or Library.Theme.Gradient1, c2 or Library.Theme.Gradient2),
 		Parent = parent,
 	})
 	return g
 end
+
+-- Vertical top-light -> bottom-dark sheen, the signature skeet panel fill.
+function Util.Sheen(parent, strength)
+	local k = strength or 0.10
+	return New("UIGradient", {
+		Rotation = 90,
+		Color = ColorSequence.new({
+			ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 255, 255)),
+			ColorSequenceKeypoint.new(0.5, Color3.fromRGB(225, 225, 225)),
+			ColorSequenceKeypoint.new(1, Color3.fromRGB(150, 150, 150)),
+		}),
+		Transparency = NumberSequence.new({
+			NumberSequenceKeypoint.new(0, 1 - k),
+			NumberSequenceKeypoint.new(1, 1 - k * 0.4),
+		}),
+		Parent = parent,
+	})
+end
+
 
 local TW_FAST   = TweenInfo.new(0.12, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
 local TW_NORMAL = TweenInfo.new(0.20, Enum.EasingStyle.Quart, Enum.EasingDirection.Out)
@@ -375,6 +400,7 @@ function Library:Notify(opts)
 	Util.Stroke(card, T.Border, 1, 0.2)
 	Util.Shadow(card, 34, 0.55)
 	Util.Gradient(card, T.Gradient1, T.Gradient2, 30)
+	Util.Sheen(card, 0.06)
 
 	local bar = New("Frame", {
 		Size = UDim2.new(0, 3, 1, -12),
@@ -581,6 +607,7 @@ function Container:AddButton(opts)
 	local stroke = Util.Stroke(btn, T.Border, 1, 0.25)
 	local glow = Util.Glow(btn, T.Accent, 1)
 	Util.Gradient(btn, T.Gradient1, T.Gradient2, 20)
+	Util.Sheen(btn, 0.06)
 
 	local iconLeft, iconRight
 	if opts.Icon then
@@ -1071,6 +1098,7 @@ local function buildDropdown(self, opts, multi)
 	Util.Corner(6, button)
 	local stroke = Util.Stroke(button, T.Border, 1, 0.25)
 	Util.Gradient(button, T.Gradient1, T.Gradient2, 20)
+	Util.Sheen(button, 0.06)
 
 	local display = New("TextLabel", {
 		BackgroundTransparency = 1, Position = UDim2.fromOffset(8, 0), Size = UDim2.new(1, -30, 1, 0),
@@ -1090,6 +1118,7 @@ local function buildDropdown(self, opts, multi)
 	})
 	Util.Corner(6, popup); Util.Stroke(popup, T.Accent, 1, 0.55); Util.Shadow(popup, 40, 0.5)
 	Util.Gradient(popup, T.Gradient1, T.Gradient2, 30)
+	Util.Sheen(popup, 0.06)
 
 	local searchBox
 	local listTop = 4
@@ -1565,6 +1594,7 @@ function Container:AddColorpicker(opts)
 	})
 	Util.Corner(8, panel); Util.Stroke(panel, T.Accent, 1, 0.55); Util.Shadow(panel, 44, 0.5)
 	Util.Gradient(panel, T.Gradient1, T.Gradient2, 30)
+	Util.Sheen(panel, 0.06)
 
 	-- Saturation / Value square
 	local sv = New("ImageLabel", {
@@ -1786,6 +1816,7 @@ function Container:AddGroupbox(titleOrOpts, maybeOpts)
 	Util.Corner(8, box)
 	local stroke = Util.Stroke(box, T.Border, 1, 0.25)
 	Util.Gradient(box, T.Gradient1, T.Gradient2, 35)
+	Util.Sheen(box, 0.06)
 
 	local header = New("TextButton", {
 		Size = UDim2.new(1, 0, 0, 36), BackgroundTransparency = 1, AutoButtonColor = false, Text = "", Parent = box,
@@ -1873,6 +1904,7 @@ function Container:AddTabbox(opts)
 	})
 	Util.Corner(8, box); Util.Stroke(box, T.Border, 1, 0.25)
 	Util.Gradient(box, T.Gradient1, T.Gradient2, 35)
+	Util.Sheen(box, 0.06)
 
 	-- Segmented pill strip (skeet-style) instead of a bare underline row.
 	local stripHolder = New("Frame", {
@@ -1992,14 +2024,21 @@ function Library:CreateWindow(opts)
 		Position = opts.Position or UDim2.fromScale(0.5, 0.5),
 		Size = size,
 		BackgroundColor3 = T.Background,
-		BackgroundTransparency = 0.05,
+		BackgroundTransparency = 0,
 		ClipsDescendants = false,
 		Parent = self.ScreenGui,
 	})
 	Util.Corner(10, main)
-	Util.Stroke(main, T.Border, 1, 0.15)
+	Util.Stroke(main, Color3.fromRGB(8, 8, 8), 1, 0)
+	-- inner light bevel line, the classic skeet double border
+	local bevel = New("Frame", {
+		Name = "Bevel", Size = UDim2.new(1, -2, 1, -2), Position = UDim2.fromOffset(1, 1),
+		BackgroundTransparency = 1, BorderSizePixel = 0, ZIndex = 10, Parent = main,
+	})
+	Util.Stroke(bevel, Color3.fromRGB(58, 58, 58), 1, 0.35)
 	Util.Shadow(main, 60, 0.4)
 	Util.Gradient(main, T.Gradient1, T.Gradient2, 35)
+	Util.Sheen(main, 0.06)
 	Util.Glass(New("Frame", {
 		Name = "GlassOverlay", Size = UDim2.fromScale(1, 1), BackgroundColor3 = Color3.new(1, 1, 1),
 		BorderSizePixel = 0, Parent = main,
@@ -2011,11 +2050,12 @@ end
 
 	-- Header
 	local header = New("Frame", {
-		Name = "Header", Size = UDim2.new(1, 0, 0, 44), BackgroundColor3 = T.Panel, BackgroundTransparency = 0.15, Parent = main,
+		Name = "Header", Size = UDim2.new(1, 0, 0, 26), BackgroundColor3 = T.Panel, BackgroundTransparency = 0, Parent = main,
 	})
 	Util.Corner(10, header)
 	Util.Gradient(header, T.Gradient2, T.Gradient1, 0)
-	New("Frame", { Position = UDim2.new(0, 0, 1, -10), Size = UDim2.new(1, 0, 0, 10), BackgroundColor3 = T.Panel, BackgroundTransparency = 0.15, BorderSizePixel = 0, Parent = header })
+	Util.Sheen(header, 0.06)
+	New("Frame", { Position = UDim2.new(0, 0, 1, -2), Size = UDim2.new(1, 0, 0, 2), BackgroundColor3 = T.Panel, BackgroundTransparency = 0, BorderSizePixel = 0, Parent = header })
 
 	local accentLine = New("Frame", {
 		Position = UDim2.new(0, 0, 1, -1), Size = UDim2.new(1, 0, 0, 1),
@@ -2031,7 +2071,7 @@ end
 	})
 
 	local logo = New("Frame", {
-		AnchorPoint = Vector2.new(0, 0.5), Position = UDim2.new(0, 16, 0.5, 0), Size = UDim2.fromOffset(7, 7),
+		AnchorPoint = Vector2.new(0, 0.5), Position = UDim2.new(0, 8, 0.5, 0), Size = UDim2.fromOffset(6, 6),
 		BackgroundColor3 = T.Accent, BorderSizePixel = 0, Parent = header,
 	})
 	Util.Corner(2, logo)
@@ -2039,8 +2079,8 @@ end
 	Library:RegisterThemed(logo, "BackgroundColor3", "Accent")
 
 	local titleLabel = New("TextLabel", {
-		BackgroundTransparency = 1, Position = UDim2.fromOffset(32, 0), Size = UDim2.new(1, -190, 1, 0),
-		Font = T.FontBold, Text = opts.Title or "SkeetwareUI", TextColor3 = T.Text, TextSize = 14,
+		BackgroundTransparency = 1, Position = UDim2.fromOffset(22, 0), Size = UDim2.new(1, -170, 1, 0),
+		Font = T.FontBold, Text = opts.Title or "SkeetwareUI", TextColor3 = T.Text, TextSize = 12,
 		TextXAlignment = Enum.TextXAlignment.Left, Parent = header,
 	})
 	local subLabel = New("TextLabel", {
