@@ -1,24 +1,31 @@
 --[[
-	SkeetwareUI — Premium dark UI library for Roblox executors
-	Style: CS2 / Skeetware inspired — gradient glass panels, neon cyan accents.
+	SkeetwareUI v1.1 — Premium dark UI library for Roblox executors
+	Style: CS2 / Skeetware inspired — gradient glass panels, neon accents,
+	sidebar navigation with icons, segmented tabboxes and consistent spacing.
 
 	Loadstring ready:
 		local Library = loadstring(game:HttpGet("<your-raw-url>/SkeetwareUI.lua"))()
 
 	Quick start:
-		local Window   = Library:CreateWindow({ Title = "skeetware.cc", Size = UDim2.fromOffset(720, 520) })
-		local Tab      = Window:AddTab("Legit", "rbxassetid://0")
-		local Group    = Tab:AddGroupbox("Aimbot")
+		local Window = Library:CreateWindow({ Title = "skeetware.cc", Size = UDim2.fromOffset(760, 540) })
+		local Tab    = Window:AddTab("Legit", Library.Icons.Target)
+		local Group  = Tab:AddGroupbox({ Title = "Aimbot", Icon = Library.Icons.Target })
 		Group:AddToggle({ Text = "Enabled", Default = true, Callback = print })
+		Library:CreateSettingsTab(Window)   -- theme manager + config manager + menu keybind
 
-	Public API (all return element objects with :Set/:Get/:Destroy):
-		Library:CreateWindow, Library:Notify, Library:SaveConfig, Library:LoadConfig,
+	Public API (all elements return objects with :Set/:Get/:Destroy):
+		Library:CreateWindow, Library:CreateSettingsTab, Library:Notify,
+		Library:SaveConfig, Library:LoadConfig, Library:DeleteConfig,
 		Library:ListConfigs, Library:Unload, Library:SetAccent
-		Window:AddTab, Window:Minimize, Window:Toggle, Window:Destroy
+		Window:AddTab, Window:Minimize, Window:Maximize, Window:Toggle,
+		Window:SetScale, Window:SetOpacity, Window:Destroy
 		Tab:AddGroupbox, Tab:AddTabbox, Tab:AddScrollingFrame
-		Groupbox/Tabbox-Tab:AddToggle, AddButton, AddSlider, AddMinMaxSlider, AddDropdown,
-			AddMultiDropdown, AddColorpicker, AddKeybind, AddTextlabel, AddSearchbar,
-			AddGroupbox (nested), AddScrollingFrame
+		Groupbox/Tabbox-Tab:AddToggle, AddButton (Icon/Risky), AddSlider (Suffix/Ticks),
+			AddMinMaxSlider, AddDropdown, AddMultiDropdown, AddColorpicker, AddKeybind,
+			AddTextlabel, AddSearchbar, AddGroupbox (nested), AddScrollingFrame
+
+	Theme spacing tokens live in Library.Theme (PadOuter/PadInner/GapRow/GapBox).
+	Library.Icons holds ready-made asset ids; swap any of them for your own.
 --]]
 
 --============================================================================--
@@ -49,24 +56,50 @@ local Library = {
 	Objects      = {},          -- {inst, prop, themeKey} for live accent recolor
 	Notifications= {},
 	ConfigFolder = "SkeetwareUI",
+	NotificationsEnabled = true,
 	Theme = {
 		Accent       = Color3.fromRGB(0, 240, 255),
 		AccentDark   = Color3.fromRGB(0, 140, 190),
-		Background   = Color3.fromRGB(12, 14, 22),
-		BackgroundAlt= Color3.fromRGB(18, 20, 32),
+		Background   = Color3.fromRGB(11, 13, 20),
+		BackgroundAlt= Color3.fromRGB(15, 17, 27),
 		Gradient1    = Color3.fromRGB(16, 20, 40),   -- dark blue
 		Gradient2    = Color3.fromRGB(22, 12, 34),   -- dark purple
-		Panel        = Color3.fromRGB(22, 24, 36),
-		Element      = Color3.fromRGB(30, 33, 48),
+		Panel        = Color3.fromRGB(20, 22, 33),
+		Element      = Color3.fromRGB(29, 32, 46),
 		ElementHover = Color3.fromRGB(38, 42, 60),
-		Border       = Color3.fromRGB(48, 52, 74),
-		Text         = Color3.fromRGB(232, 236, 245),
-		TextDim      = Color3.fromRGB(140, 148, 170),
+		Border       = Color3.fromRGB(45, 49, 70),
+		Text         = Color3.fromRGB(234, 238, 246),
+		TextDim      = Color3.fromRGB(134, 142, 165),
 		Risky        = Color3.fromRGB(255, 80, 110),
 		Good         = Color3.fromRGB(70, 230, 150),
 		Font         = Enum.Font.GothamMedium,
 		FontBold     = Enum.Font.GothamBold,
 		TextSize     = 13,
+		-- Spacing scale (used across every container for consistent padding).
+		PadOuter     = 16,
+		PadInner     = 12,
+		GapRow       = 8,
+		GapBox       = 12,
+	},
+	-- Built-in icon set (Roblox asset ids) so tabs/groupboxes/buttons can use
+	-- icons without hunting for asset ids: Library.Icons.Target etc.
+	Icons = {
+		Target    = "rbxassetid://10709790644",
+		Crosshair = "rbxassetid://10723345699",
+		Eye       = "rbxassetid://10723346959",
+		Users     = "rbxassetid://10747373176",
+		Globe     = "rbxassetid://10723383029",
+		Shield    = "rbxassetid://10747370665",
+		Sliders   = "rbxassetid://10734898355",
+		Settings  = "rbxassetid://10734950020",
+		Palette   = "rbxassetid://10723415903",
+		Save      = "rbxassetid://10734898355",
+		Download  = "rbxassetid://10723346959",
+		Trash     = "rbxassetid://10747373176",
+		Refresh   = "rbxassetid://10734947940",
+		Power     = "rbxassetid://10723388177",
+		Zap       = "rbxassetid://10723434711",
+		Search    = "rbxassetid://10734943674",
 	},
 }
 Library.__index = Library
@@ -340,6 +373,7 @@ New("UIListLayout", {
 --- Library:Notify({ Title, Text, Duration, Type = "info"|"success"|"error" })
 function Library:Notify(opts)
 	if self.Unloaded then return end
+	if self.NotificationsEnabled == false then return end
 	if typeof(opts) == "string" then opts = { Text = opts } end
 	opts = opts or {}
 	local T = self.Theme
@@ -614,6 +648,12 @@ function Container:AddButton(opts)
 	local obj = { Loading = false, Disabled = opts.Disabled or false }
 	obj.Instance = btn
 
+	local baseText = opts.Risky and T.Risky or T.Text
+	if opts.Risky then
+		label.TextColor3 = T.Risky
+		if iconLeft then iconLeft.ImageColor3 = T.Risky end
+	end
+
 	local function refresh()
 		if obj.Disabled then
 			btn.BackgroundTransparency = 0.55
@@ -621,7 +661,7 @@ function Container:AddButton(opts)
 			stroke.Transparency = 0.7
 		else
 			btn.BackgroundTransparency = 0.1
-			label.TextColor3 = T.Text
+			label.TextColor3 = baseText
 			stroke.Transparency = 0.25
 		end
 	end
@@ -1352,10 +1392,11 @@ function Container:AddSearchbar(opts)
 	Util.Corner(6, holder)
 	local stroke = Util.Stroke(holder, T.Border, 1, 0.25)
 
-	New("TextLabel", {
-		BackgroundTransparency = 1, Position = UDim2.fromOffset(8, 0), Size = UDim2.fromOffset(16, 28),
-		Font = T.FontBold, Text = "?", TextColor3 = T.Accent, TextSize = 13, Parent = holder,
+	local searchIcon = New("ImageLabel", {
+		BackgroundTransparency = 1, Image = Library.Icons.Search, ImageColor3 = T.Accent,
+		AnchorPoint = Vector2.new(0, 0.5), Position = UDim2.new(0, 9, 0.5, 0), Size = UDim2.fromOffset(13, 13), Parent = holder,
 	})
+	Library:RegisterThemed(searchIcon, "ImageColor3", "Accent")
 
 	local box = New("TextBox", {
 		BackgroundTransparency = 1, Position = UDim2.fromOffset(28, 0), Size = UDim2.new(1, -56, 1, 0),
@@ -1377,7 +1418,7 @@ function Container:AddSearchbar(opts)
 	local function emit()
 		debounceToken += 1
 		local token = debounceToken
-		local delay = opts.Debounce or 0.15
+		local delay = opts.Instant and 0 or (opts.Debounce or 0.15)
 		task.delay(delay, function()
 			if token ~= debounceToken then return end
 			if opts.Flag then Library.Flags[opts.Flag] = obj.Value end
@@ -1764,37 +1805,48 @@ function Container:AddGroupbox(titleOrOpts, maybeOpts)
 	Util.Gradient(box, T.Gradient1, T.Gradient2, 35)
 
 	local header = New("TextButton", {
-		Size = UDim2.new(1, 0, 0, 30), BackgroundTransparency = 1, AutoButtonColor = false, Text = "", Parent = box,
+		Size = UDim2.new(1, 0, 0, 36), BackgroundTransparency = 1, AutoButtonColor = false, Text = "", Parent = box,
 	})
 	local accentBar = New("Frame", {
-		Position = UDim2.fromOffset(10, 12), Size = UDim2.fromOffset(3, 12),
+		AnchorPoint = Vector2.new(0, 0.5), Position = UDim2.new(0, 12, 0.5, 0), Size = UDim2.fromOffset(3, 13),
 		BackgroundColor3 = T.Accent, BorderSizePixel = 0, Parent = header,
 	})
 	Util.Corner(2, accentBar)
 	Library:RegisterThemed(accentBar, "BackgroundColor3", "Accent")
 
-	local titleX = 20
+	local titleX = 23
 	if opts.Icon then
-		New("ImageLabel", { BackgroundTransparency = 1, Image = opts.Icon, ImageColor3 = T.Accent, Size = UDim2.fromOffset(14, 14), Position = UDim2.fromOffset(20, 8), Parent = header })
-		titleX = 40
+		local ic = New("ImageLabel", {
+			BackgroundTransparency = 1, Image = opts.Icon, ImageColor3 = T.Accent, Size = UDim2.fromOffset(14, 14),
+			AnchorPoint = Vector2.new(0, 0.5), Position = UDim2.new(0, 23, 0.5, 0), Parent = header,
+		})
+		Library:RegisterThemed(ic, "ImageColor3", "Accent")
+		titleX = 44
 	end
 	New("TextLabel", {
-		BackgroundTransparency = 1, Position = UDim2.fromOffset(titleX, 0), Size = UDim2.new(1, -titleX - 30, 1, 0),
+		BackgroundTransparency = 1, Position = UDim2.fromOffset(titleX, 0), Size = UDim2.new(1, -titleX - 32, 1, 0),
 		Font = T.FontBold, Text = opts.Title or "Group", TextColor3 = T.Text, TextSize = 13,
 		TextXAlignment = Enum.TextXAlignment.Left, Parent = header,
 	})
 	local chevron = New("TextLabel", {
-		BackgroundTransparency = 1, AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -10, 0.5, 0),
-		Size = UDim2.fromOffset(14, 14), Font = T.FontBold, Text = "v", TextColor3 = T.TextDim, TextSize = 11,
+		BackgroundTransparency = 1, AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -12, 0.5, 0),
+		Size = UDim2.fromOffset(14, 14), Font = T.FontBold, Text = "⌄", TextColor3 = T.TextDim, TextSize = 12,
 		Visible = opts.Collapsible ~= false, Parent = header,
+	})
+	local headerDivider = New("Frame", {
+		Position = UDim2.new(0, 12, 1, 0), Size = UDim2.new(1, -24, 0, 1),
+		BackgroundColor3 = T.Border, BackgroundTransparency = 0.55, BorderSizePixel = 0, Parent = header,
 	})
 
 	local body = New("Frame", {
-		Position = UDim2.fromOffset(0, 30), Size = UDim2.new(1, 0, 0, 0),
+		Position = UDim2.fromOffset(0, 36), Size = UDim2.new(1, 0, 0, 0),
 		AutomaticSize = Enum.AutomaticSize.Y, BackgroundTransparency = 1, ClipsDescendants = false, Parent = box,
 	})
-	Util.Padding(body, 0, 10, 10, 10)
-	Util.List(body, 6)
+	Util.Padding(body, 12, 12, 12, 12)
+	Util.List(body, 8)
+
+	header.MouseEnter:Connect(function() Util.Tween(chevron, { TextColor3 = T.Accent }, TW_FAST) end)
+	header.MouseLeave:Connect(function() Util.Tween(chevron, { TextColor3 = T.TextDim }, TW_FAST) end)
 
 	local sub = Container.new(body, self.Window)
 	sub.Instance = box
@@ -1806,7 +1858,7 @@ function Container:AddGroupbox(titleOrOpts, maybeOpts)
 		box.AutomaticSize = Enum.AutomaticSize.Y
 		if self.Collapsed then
 			box.AutomaticSize = Enum.AutomaticSize.None
-			box.Size = UDim2.new(1, 0, 0, 30)
+			box.Size = UDim2.new(1, 0, 0, 36)
 		end
 		Util.Tween(chevron, { Rotation = self.Collapsed and -90 or 0 }, TW_NORMAL)
 	end
@@ -1839,19 +1891,20 @@ function Container:AddTabbox(opts)
 	Util.Corner(8, box); Util.Stroke(box, T.Border, 1, 0.25)
 	Util.Gradient(box, T.Gradient1, T.Gradient2, 35)
 
-	local strip = New("Frame", { Size = UDim2.new(1, 0, 0, 28), BackgroundTransparency = 1, Parent = box })
-	Util.Padding(strip, 4, 4, 0, 4)
+	-- Segmented pill strip (skeet-style) instead of a bare underline row.
+	local stripHolder = New("Frame", {
+		Size = UDim2.new(1, -24, 0, 30), Position = UDim2.fromOffset(12, 12),
+		BackgroundColor3 = T.BackgroundAlt, BackgroundTransparency = 0.25, Parent = box,
+	})
+	Util.Corner(8, stripHolder)
+	Util.Stroke(stripHolder, T.Border, 1, 0.45)
+
+	local strip = New("Frame", { Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, Parent = stripHolder })
+	Util.Padding(strip, 4, 4, 4, 4)
 	Util.List(strip, 4, Enum.FillDirection.Horizontal)
 
-	local underline = New("Frame", {
-		Size = UDim2.fromOffset(0, 2), Position = UDim2.fromOffset(0, 26),
-		BackgroundColor3 = T.Accent, BorderSizePixel = 0, Parent = box,
-	})
-	Util.Corner(2, underline)
-	Library:RegisterThemed(underline, "BackgroundColor3", "Accent")
-
 	local bodies = New("Frame", {
-		Position = UDim2.fromOffset(0, 30), Size = UDim2.new(1, 0, 0, 0),
+		Position = UDim2.fromOffset(0, 46), Size = UDim2.new(1, 0, 0, 0),
 		AutomaticSize = Enum.AutomaticSize.Y, BackgroundTransparency = 1, Parent = box,
 	})
 
@@ -1860,13 +1913,14 @@ function Container:AddTabbox(opts)
 	function tabbox:AddTab(name, tabOpts)
 		tabOpts = tabOpts or {}
 		local btn = New("TextButton", {
-			Size = UDim2.fromOffset(0, 24), AutomaticSize = Enum.AutomaticSize.X,
-			BackgroundTransparency = 1, AutoButtonColor = false, Text = "", Parent = strip,
+			Size = UDim2.fromOffset(0, 22), AutomaticSize = Enum.AutomaticSize.X,
+			BackgroundColor3 = T.Element, BackgroundTransparency = 1, AutoButtonColor = false, Text = "", Parent = strip,
 		})
-		Util.Padding(btn, 0, 10, 0, 10)
+		Util.Corner(6, btn)
+		Util.Padding(btn, 0, 12, 0, 12)
 		local label = New("TextLabel", {
-			BackgroundTransparency = 1, AutomaticSize = Enum.AutomaticSize.X, Size = UDim2.fromOffset(0, 24),
-			Font = T.Font, Text = name, TextColor3 = T.TextDim, TextSize = 12, Parent = btn,
+			BackgroundTransparency = 1, AutomaticSize = Enum.AutomaticSize.X, Size = UDim2.fromOffset(0, 22),
+			Font = T.FontBold, Text = name, TextColor3 = T.TextDim, TextSize = 12, Parent = btn,
 		})
 		local badge
 		local close
@@ -1874,27 +1928,26 @@ function Container:AddTabbox(opts)
 			Visible = false, Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y,
 			BackgroundTransparency = 1, Parent = bodies,
 		})
-		Util.Padding(body, 4, 10, 10, 10)
-		Util.List(body, 6)
+		Util.Padding(body, 4, 12, 12, 12)
+		Util.List(body, 8)
 
 		local sub = Container.new(body, self.Window)
 		sub.Instance = body
 		sub.Button = btn
 
 		function sub:Select()
+			local T = Library.Theme
 			for _, t in ipairs(tabbox.Tabs) do
 				t.Body.Visible = false
 				t.Label.TextColor3 = T.TextDim
+				Util.Tween(t.Button, { BackgroundTransparency = 1 }, TW_FAST)
+				if t.IconImage then Util.Tween(t.IconImage, { ImageColor3 = T.TextDim }, TW_FAST) end
 			end
 			body.Visible = true
-			label.TextColor3 = T.Accent
+			label.TextColor3 = T.Text
+			Util.Tween(btn, { BackgroundTransparency = 0.15 }, TW_FAST)
+			if sub.IconImage then Util.Tween(sub.IconImage, { ImageColor3 = T.Accent }, TW_FAST) end
 			tabbox.Current = sub
-			task.defer(function()
-				Util.Tween(underline, {
-					Position = UDim2.fromOffset(btn.AbsolutePosition.X - box.AbsolutePosition.X, 26),
-					Size = UDim2.fromOffset(btn.AbsoluteSize.X, 2),
-				}, TW_NORMAL)
-			end)
 		end
 		function sub:SetBadge(n)
 			if not badge then
@@ -1923,7 +1976,11 @@ function Container:AddTabbox(opts)
 			end)
 		end
 		if tabOpts.Icon then
-			New("ImageLabel", { BackgroundTransparency = 1, Image = tabOpts.Icon, ImageColor3 = T.Accent, Size = UDim2.fromOffset(12, 12), Position = UDim2.fromOffset(-16, 6), Parent = btn })
+			label.Position = UDim2.fromOffset(17, 0)
+			sub.IconImage = New("ImageLabel", {
+				BackgroundTransparency = 1, Image = tabOpts.Icon, ImageColor3 = T.TextDim,
+				Size = UDim2.fromOffset(13, 13), AnchorPoint = Vector2.new(0, 0.5), Position = UDim2.new(0, 0, 0.5, 0), Parent = btn,
+			})
 		end
 		if tabOpts.Badge then sub:SetBadge(tabOpts.Badge) end
 
@@ -1971,7 +2028,7 @@ end
 
 	-- Header
 	local header = New("Frame", {
-		Size = UDim2.new(1, 0, 0, 38), BackgroundColor3 = T.Panel, BackgroundTransparency = 0.15, Parent = main,
+		Name = "Header", Size = UDim2.new(1, 0, 0, 44), BackgroundColor3 = T.Panel, BackgroundTransparency = 0.15, Parent = main,
 	})
 	Util.Corner(10, header)
 	Util.Gradient(header, T.Gradient2, T.Gradient1, 0)
@@ -1990,70 +2047,103 @@ end
 		Parent = accentLine,
 	})
 
-	New("Frame", { Position = UDim2.fromOffset(14, 16), Size = UDim2.fromOffset(6, 6), BackgroundColor3 = T.Accent, BorderSizePixel = 0, Parent = header }, {})
-	local dot = header:GetChildren()
+	local logo = New("Frame", {
+		AnchorPoint = Vector2.new(0, 0.5), Position = UDim2.new(0, 16, 0.5, 0), Size = UDim2.fromOffset(7, 7),
+		BackgroundColor3 = T.Accent, BorderSizePixel = 0, Parent = header,
+	})
+	Util.Corner(2, logo)
+	Util.Glow(logo, T.Accent, 0.35)
+	Library:RegisterThemed(logo, "BackgroundColor3", "Accent")
+
 	local titleLabel = New("TextLabel", {
-		BackgroundTransparency = 1, Position = UDim2.fromOffset(28, 0), Size = UDim2.new(1, -140, 1, 0),
+		BackgroundTransparency = 1, Position = UDim2.fromOffset(32, 0), Size = UDim2.new(1, -190, 1, 0),
 		Font = T.FontBold, Text = opts.Title or "SkeetwareUI", TextColor3 = T.Text, TextSize = 14,
 		TextXAlignment = Enum.TextXAlignment.Left, Parent = header,
 	})
 	local subLabel = New("TextLabel", {
-		BackgroundTransparency = 1, AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -80, 0.5, 0),
+		BackgroundTransparency = 1, AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -104, 0.5, 0),
 		Size = UDim2.fromOffset(200, 14), Font = T.Font, Text = opts.Subtitle or ("v" .. self.Version),
 		TextColor3 = T.TextDim, TextSize = 11, TextXAlignment = Enum.TextXAlignment.Right, Parent = header,
 	})
 
-	local function headerButton(x, text, cb)
+	local function headerButton(x, glyph, cb, danger)
 		local b = New("TextButton", {
-			AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, x, 0.5, 0), Size = UDim2.fromOffset(22, 22),
+			AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, x, 0.5, 0), Size = UDim2.fromOffset(24, 24),
 			BackgroundColor3 = T.Element, BackgroundTransparency = 0.25, AutoButtonColor = false,
-			Font = T.FontBold, Text = text, TextColor3 = T.TextDim, TextSize = 12, Parent = header,
+			Font = T.FontBold, Text = glyph, TextColor3 = T.TextDim, TextSize = 13, Parent = header,
 		})
-		Util.Corner(6, b); Util.Stroke(b, T.Border, 1, 0.4)
-		b.MouseEnter:Connect(function() Util.Tween(b, { BackgroundTransparency = 0.05 }, TW_FAST); b.TextColor3 = T.Accent end)
+		Util.Corner(7, b); Util.Stroke(b, T.Border, 1, 0.4)
+		local hoverColor = danger and T.Risky or T.Accent
+		b.MouseEnter:Connect(function() Util.Tween(b, { BackgroundTransparency = 0.05 }, TW_FAST); b.TextColor3 = hoverColor end)
 		b.MouseLeave:Connect(function() Util.Tween(b, { BackgroundTransparency = 0.25 }, TW_FAST); b.TextColor3 = T.TextDim end)
 		b.MouseButton1Click:Connect(cb)
 		return b
 	end
 
+
 	local window = { Tabs = {}, Current = nil, Minimized = false, Maximized = false, Instance = main }
+
+	-- Clipped body so nothing can spill outside the rounded window frame.
+	local body = New("Frame", {
+		Name = "Body", Position = UDim2.fromOffset(0, 44), Size = UDim2.new(1, 0, 1, -44),
+		BackgroundTransparency = 1, ClipsDescendants = true, Parent = main,
+	})
 
 	-- Sidebar tab navigation
 	local sidebar = New("Frame", {
-		Position = UDim2.fromOffset(0, 38), Size = UDim2.new(0, 150, 1, -38),
-		BackgroundColor3 = T.BackgroundAlt, BackgroundTransparency = 0.25, Parent = main,
+		Name = "Sidebar", Size = UDim2.new(0, 168, 1, 0),
+		BackgroundColor3 = T.BackgroundAlt, BackgroundTransparency = 0.25,
+		ClipsDescendants = true, Parent = body,
 	})
-	Util.Padding(sidebar, 10, 8, 10, 8)
-	Util.List(sidebar, 4)
-	New("Frame", { AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, 0, 0, 0), Size = UDim2.new(0, 1, 1, 0), BackgroundColor3 = T.Border, BackgroundTransparency = 0.5, BorderSizePixel = 0, Parent = sidebar })
+	New("Frame", { AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, 0, 0, 0), Size = UDim2.new(0, 1, 1, 0), BackgroundColor3 = T.Border, BackgroundTransparency = 0.5, BorderSizePixel = 0, ZIndex = 3, Parent = sidebar })
+
+	local navList = New("Frame", {
+		Name = "Nav", Size = UDim2.new(1, 0, 1, -34), BackgroundTransparency = 1, Parent = sidebar,
+	})
+	Util.Padding(navList, 14, 12, 12, 12)
+	Util.List(navList, 6)
+
+	New("TextLabel", {
+		BackgroundTransparency = 1, AnchorPoint = Vector2.new(0, 1), Position = UDim2.new(0, 14, 1, -12),
+		Size = UDim2.new(1, -28, 0, 14), Font = T.Font,
+		Text = (opts.Footer or "skeetware.cc") .. "  •  " .. Util.KeyName(opts.ToggleKey or self.ToggleKey),
+		TextColor3 = T.TextDim, TextSize = 10, TextXAlignment = Enum.TextXAlignment.Left,
+		TextTransparency = 0.25, Parent = sidebar,
+	})
 
 	local pageHolder = New("Frame", {
-		Position = UDim2.fromOffset(150, 38), Size = UDim2.new(1, -150, 1, -38), BackgroundTransparency = 1, Parent = main,
+		Position = UDim2.fromOffset(168, 0), Size = UDim2.new(1, -168, 1, 0),
+		BackgroundTransparency = 1, ClipsDescendants = true, Parent = body,
 	})
 
 	--- Window:AddTab(name, icon)
 	function window:AddTab(name, icon)
 		local T = Library.Theme
 		local btn = New("TextButton", {
-			Size = UDim2.new(1, 0, 0, 30), BackgroundColor3 = T.Element, BackgroundTransparency = 1,
-			AutoButtonColor = false, Text = "", Parent = sidebar,
+			Size = UDim2.new(1, 0, 0, 34), BackgroundColor3 = T.Element, BackgroundTransparency = 1,
+			AutoButtonColor = false, Text = "", Parent = navList,
 		})
-		Util.Corner(6, btn)
+		Util.Corner(7, btn)
 		local marker = New("Frame", {
-			Position = UDim2.fromOffset(0, 8), Size = UDim2.fromOffset(2, 14),
+			AnchorPoint = Vector2.new(0, 0.5), Position = UDim2.new(0, 0, 0.5, 0), Size = UDim2.fromOffset(3, 16),
 			BackgroundColor3 = T.Accent, BackgroundTransparency = 1, BorderSizePixel = 0, Parent = btn,
 		})
 		Util.Corner(2, marker)
 		Library:RegisterThemed(marker, "BackgroundColor3", "Accent")
 
-		local x = 12
+		local x = 14
+		local iconImg
 		if icon then
-			New("ImageLabel", { BackgroundTransparency = 1, Image = icon, ImageColor3 = T.TextDim, Size = UDim2.fromOffset(14, 14), Position = UDim2.fromOffset(12, 8), Parent = btn })
-			x = 34
+			iconImg = New("ImageLabel", {
+				BackgroundTransparency = 1, Image = icon, ImageColor3 = T.TextDim,
+				Size = UDim2.fromOffset(15, 15), AnchorPoint = Vector2.new(0, 0.5),
+				Position = UDim2.new(0, 14, 0.5, 0), Parent = btn,
+			})
+			x = 39
 		end
 		local label = New("TextLabel", {
-			BackgroundTransparency = 1, Position = UDim2.fromOffset(x, 0), Size = UDim2.new(1, -x, 1, 0),
-			Font = T.Font, Text = name, TextColor3 = T.TextDim, TextSize = 13,
+			BackgroundTransparency = 1, Position = UDim2.fromOffset(x, 0), Size = UDim2.new(1, -x - 10, 1, 0),
+			Font = T.FontBold, Text = name, TextColor3 = T.TextDim, TextSize = 13,
 			TextXAlignment = Enum.TextXAlignment.Left, Parent = btn,
 		})
 
@@ -2064,15 +2154,15 @@ end
 			AutomaticCanvasSize = Enum.AutomaticSize.Y, Parent = pageHolder,
 		})
 		Library:RegisterThemed(page, "ScrollBarImageColor3", "Accent")
-		Util.Padding(page, 12)
-		local grid = New("UIListLayout", {
-			FillDirection = Enum.FillDirection.Horizontal, Padding = UDim.new(0, 10),
+		Util.Padding(page, 16, 14, 16, 16)
+		New("UIListLayout", {
+			FillDirection = Enum.FillDirection.Horizontal, Padding = UDim.new(0, 12),
 			SortOrder = Enum.SortOrder.LayoutOrder, Parent = page,
 		})
 
 		local function makeColumn()
-			local col = New("Frame", { Size = UDim2.new(0.5, -5, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, BackgroundTransparency = 1, Parent = page })
-			Util.List(col, 10)
+			local col = New("Frame", { Size = UDim2.new(0.5, -6, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, BackgroundTransparency = 1, Parent = page })
+			Util.List(col, 12)
 			return col
 		end
 		local left, right = makeColumn(), makeColumn()
@@ -2096,23 +2186,26 @@ end
 		end
 
 		function tab:Select()
+			local T = Library.Theme
 			for _, t in ipairs(window.Tabs) do
 				t.Page.Visible = false
 				Util.Tween(t.Button, { BackgroundTransparency = 1 }, TW_FAST)
 				Util.Tween(t.Marker, { BackgroundTransparency = 1 }, TW_FAST)
 				t.Label.TextColor3 = T.TextDim
+				if t.Icon then Util.Tween(t.Icon, { ImageColor3 = T.TextDim }, TW_FAST) end
 			end
 			page.Visible = true
 			page.Position = UDim2.fromOffset(0, 8)
 			Util.Tween(page, { Position = UDim2.fromOffset(0, 0) }, TW_SLOW)
-			Util.Tween(btn, { BackgroundTransparency = 0.75 }, TW_FAST)
+			Util.Tween(btn, { BackgroundTransparency = 0.72 }, TW_FAST)
 			Util.Tween(marker, { BackgroundTransparency = 0 }, TW_FAST)
 			label.TextColor3 = T.Text
+			if iconImg then Util.Tween(iconImg, { ImageColor3 = T.Accent }, TW_FAST) end
 			window.Current = tab
 		end
 		function tab:Destroy() btn:Destroy() page:Destroy() end
 
-		tab.Page, tab.Marker, tab.Label = page, marker, label
+		tab.Page, tab.Marker, tab.Label, tab.Icon = page, marker, label, iconImg
 		btn.MouseButton1Click:Connect(function() tab:Select() end)
 		btn.MouseEnter:Connect(function() if window.Current ~= tab then Util.Tween(btn, { BackgroundTransparency = 0.88 }, TW_FAST) end end)
 		btn.MouseLeave:Connect(function() if window.Current ~= tab then Util.Tween(btn, { BackgroundTransparency = 1 }, TW_FAST) end end)
@@ -2124,17 +2217,17 @@ end
 
 	-- Minimize / Maximize / Close
 	local originalSize, originalPos = size, main.Position
-	local minBtn = headerButton(-58, "-", function() window:Minimize() end)
-	local maxBtn = headerButton(-32, "[]", function() window:Maximize() end)
-	local closeBtn = headerButton(-6, "x", function() Library:Unload() end)
+	local minBtn = headerButton(-74, "–", function() window:Minimize() end)
+	local maxBtn = headerButton(-45, "□", function() window:Maximize() end)
+	local closeBtn = headerButton(-16, "✕", function() Library:Unload() end, true)
 
 	function window:Minimize()
 		self.Minimized = not self.Minimized
 		if self.Minimized then
-			Util.Tween(main, { Size = UDim2.fromOffset(main.AbsoluteSize.X, 38) }, TW_NORMAL)
-			sidebar.Visible, pageHolder.Visible = false, false
+			Util.Tween(main, { Size = UDim2.fromOffset(main.AbsoluteSize.X, 44) }, TW_NORMAL)
+			body.Visible = false
 		else
-			sidebar.Visible, pageHolder.Visible = true, true
+			body.Visible = true
 			Util.Tween(main, { Size = self.Maximized and UDim2.fromScale(0.96, 0.94) or originalSize }, TW_NORMAL)
 		end
 	end
@@ -2150,6 +2243,18 @@ end
 	function window:Toggle(state)
 		if state == nil then state = not main.Visible end
 		main.Visible = state
+	end
+	--- window:SetScale(number) — global UI scale (0.75 – 1.35 recommended).
+	function window:SetScale(n)
+		local scale = main:FindFirstChildOfClass("UIScale") or New("UIScale", { Parent = main })
+		scale.Scale = math.clamp(tonumber(n) or 1, 0.5, 2)
+	end
+	--- window:SetOpacity(number) — 1 = solid, lower = more see-through.
+	function window:SetOpacity(n)
+		local a = 1 - math.clamp(tonumber(n) or 1, 0.2, 1)
+		main.BackgroundTransparency = 0.05 + a
+		header.BackgroundTransparency = 0.15 + a * 0.6
+		sidebar.BackgroundTransparency = 0.25 + a * 0.6
 	end
 	function window:Destroy() main:Destroy() end
 
@@ -2327,49 +2432,161 @@ end
 Library.Destroy = Library.Unload
 
 --============================================================================--
+-- BUILT-IN SETTINGS TAB (theme manager + config manager + menu keybinds)
+--============================================================================--
+--- Library:CreateSettingsTab(window, opts) -> tab
+--- Adds a fully wired "Settings" tab: accent/theme manager, UI scale &
+--- transparency, menu keybind picker and a complete config manager.
+function Library:CreateSettingsTab(window, opts)
+	opts = opts or {}
+	local tab = window:AddTab(opts.Name or "Settings", Library.Icons.Settings)
+
+	------------------------------------------------------------------ THEME
+	local theme = tab:AddGroupbox({ Title = "Theme manager", Icon = Library.Icons.Palette })
+
+	local presets = {
+		["Skeetware Cyan"] = Color3.fromRGB(0, 240, 255),
+		["Neon Purple"]    = Color3.fromRGB(170, 110, 255),
+		["Toxic Green"]     = Color3.fromRGB(80, 240, 140),
+		["Sunset Orange"]  = Color3.fromRGB(255, 140, 60),
+		["Hot Pink"]       = Color3.fromRGB(255, 70, 150),
+		["Ice White"]      = Color3.fromRGB(225, 235, 250),
+	}
+	local presetNames = {}
+	for name in pairs(presets) do table.insert(presetNames, name) end
+	table.sort(presetNames)
+
+	local accentPicker
+	theme:AddDropdown({
+		Text = "Accent preset", Flag = "ui_accent_preset", Options = presetNames,
+		Default = "Skeetware Cyan",
+		Callback = function(name)
+			local c = presets[name]
+			if c then
+				Library:SetAccent(c)
+				if accentPicker then accentPicker:Set(c, true) end
+			end
+		end,
+	})
+	accentPicker = theme:AddColorpicker({
+		Text = "Custom accent", Flag = "ui_accent", Default = Library.Theme.Accent,
+		Callback = function(c) Library:SetAccent(c) end,
+	})
+	theme:AddSlider({
+		Text = "UI scale", Flag = "ui_scale", Min = 0.75, Max = 1.35, Step = 0.05, Default = 1,
+		Suffix = "x", Callback = function(v) window:SetScale(v) end,
+	})
+	theme:AddSlider({
+		Text = "Background opacity", Flag = "ui_opacity", Min = 0.35, Max = 1, Step = 0.05, Default = 0.95,
+		Callback = function(v) window:SetOpacity(v) end,
+	})
+
+	------------------------------------------------------------------- MENU
+	local menu = tab:AddGroupbox({ Title = "Menu", Icon = Library.Icons.Sliders })
+	menu:AddKeybind({
+		Text = "Toggle menu", Flag = "ui_toggle_key", Default = Library.ToggleKey, Mode = "Always",
+		Callback = function() end,
+		OnBind = function(key) if key then Library.ToggleKey = key end end,
+	})
+	menu:AddToggle({
+		Text = "Notifications", Flag = "ui_notifications", Default = true,
+		Callback = function(v) Library.NotificationsEnabled = v end,
+	})
+	menu:AddButton({ Text = "Rejoin-safe unload", Icon = Library.Icons.Power, Risky = true,
+		Callback = function() Library:Unload() end })
+
+	----------------------------------------------------------------- CONFIG
+	local cfgBox = tab:AddGroupbox({ Title = "Config manager", Icon = Library.Icons.Save })
+	local nameBox = cfgBox:AddSearchbar({ Placeholder = "Config name…", Instant = true })
+	local listDrop = cfgBox:AddDropdown({ Text = "Saved configs", Options = Library:ListConfigs() })
+
+	local function refresh()
+		local list = Library:ListConfigs()
+		listDrop:SetOptions(list)
+		return list
+	end
+	local function selected()
+		local n = nameBox:Get()
+		if n and n ~= "" then return n end
+		return listDrop:Get()
+	end
+
+	cfgBox:AddButton({ Text = "Save", Icon = Library.Icons.Save, Callback = function()
+		local n = selected()
+		if not n or n == "" then
+			Library:Notify({ Title = "Config", Text = "Enter a config name first.", Type = "error" })
+			return
+		end
+		Library:SaveConfig(n); refresh()
+	end })
+	cfgBox:AddButton({ Text = "Load", Icon = Library.Icons.Download, Callback = function()
+		local n = selected()
+		if n and n ~= "" then Library:LoadConfig(n) end
+	end })
+	cfgBox:AddButton({ Text = "Delete", Icon = Library.Icons.Trash, Risky = true, Callback = function()
+		local n = selected()
+		if n and n ~= "" and Library:DeleteConfig(n) then
+			Library:Notify({ Title = "Config deleted", Text = n, Type = "success" })
+			refresh()
+		end
+	end })
+	cfgBox:AddButton({ Text = "Refresh list", Icon = Library.Icons.Refresh, Callback = function()
+		Library:Notify({ Title = "Config", Text = #refresh() .. " config(s) found.", Type = "info" })
+	end })
+	cfgBox:AddTextlabel({ Text = "Folder: <b>" .. Library.ConfigFolder .. "</b>", RichText = true, Copyable = true })
+
+	return tab
+end
+
+--============================================================================--
 -- EXAMPLE USAGE (delete or keep — runs only when EXAMPLE is true)
 --============================================================================--
 local EXAMPLE = false
 if EXAMPLE then
-	local Window = Library:CreateWindow({ Title = "skeetware.cc", Subtitle = "premium build", Size = UDim2.fromOffset(720, 520) })
+	local Window = Library:CreateWindow({ Title = "skeetware.cc", Subtitle = "premium build", Size = UDim2.fromOffset(760, 540) })
 
-	local Legit = Window:AddTab("Legit")
-	local Visuals = Window:AddTab("Visuals")
-	local Settings = Window:AddTab("Settings")
+	local Legit = Window:AddTab("Legit", Library.Icons.Target)
+	local Rage = Window:AddTab("Rage", Library.Icons.Crosshair)
+	local Visuals = Window:AddTab("Visuals", Library.Icons.Eye)
+	local Misc = Window:AddTab("Misc", Library.Icons.Sliders)
 
-	local aim = Legit:AddGroupbox("Aimbot")
-	local enabled = aim:AddToggle({ Text = "Enabled", Flag = "aim_enabled", Default = true, Callback = function(v) print("aim", v) end })
-	local fov = aim:AddSlider({ Text = "FOV", Flag = "aim_fov", Min = 0, Max = 360, Step = 1, Default = 90, Ticks = 6, Callback = print })
+	local aim = Legit:AddGroupbox({ Title = "Aimbot", Icon = Library.Icons.Target })
+	local enabled = aim:AddToggle({ Text = "Enabled", Flag = "aim_enabled", Default = true })
+	local fov = aim:AddSlider({ Text = "FOV", Flag = "aim_fov", Min = 0, Max = 360, Step = 1, Default = 90, Ticks = 6 })
 	enabled:AddChild(fov)
 	aim:AddSlider({ Text = "Smoothing", Flag = "aim_smooth", Min = 0, Max = 1, Step = 0.05, Default = 0.35 })
 	aim:AddMinMaxSlider({ Text = "Distance range", Flag = "aim_range", Min = 0, Max = 500, DefaultMin = 50, DefaultMax = 300 })
-	aim:AddKeybind({ Text = "Aim key", Flag = "aim_key", Default = Enum.UserInputType.MouseButton2, Mode = "Hold", Callback = print })
-	aim:AddDropdown({ Text = "Hitbox", Flag = "aim_hitbox", Options = { "Head", "Torso", "Nearest" }, Default = "Head", Callback = print })
-	aim:AddMultiDropdown({ Text = "Targets", Flag = "aim_targets", Options = { "Players", "NPCs", "Pets", "Turrets" }, Tags = true, Callback = print })
-	aim:AddButton({ Text = "Reset aim settings", Icon = "rbxassetid://4483345998", Callback = function(b)
-		b:SetLoading(true) task.wait(1) b:SetLoading(false)
-	end })
+	aim:AddKeybind({ Text = "Aim key", Flag = "aim_key", Default = Enum.UserInputType.MouseButton2, Mode = "Hold" })
+	aim:AddDropdown({ Text = "Hitbox", Flag = "aim_hitbox", Options = { "Head", "Torso", "Nearest" }, Default = "Head" })
+	aim:AddMultiDropdown({ Text = "Targets", Flag = "aim_targets", Options = { "Players", "NPCs", "Pets", "Turrets" }, Tags = true })
 
-	local esp = Visuals:AddGroupbox("ESP")
-	esp:AddToggle({ Text = "Boxes", Flag = "esp_box", Default = true })
-	esp:AddColorpicker({ Text = "Box color", Flag = "esp_box_color", Default = Color3.fromRGB(0, 240, 255), Callback = print })
-	esp:AddTextlabel({ Text = "<b>Tip:</b> hold RMB to aim.", RichText = true, Copyable = true })
-	esp:AddSearchbar({ Placeholder = "Filter entities", Callback = print })
-	local sf = esp:AddScrollingFrame({ Height = 120 })
+	local checks = Legit:AddGroupbox({ Title = "Target checks", Icon = Library.Icons.Shield })
+	checks:AddToggle({ Text = "Visible check", Default = true })
+	checks:AddToggle({ Text = "Wall check", Default = true })
+	checks:AddToggle({ Text = "Team check" })
+
+	local rage = Rage:AddGroupbox({ Title = "Silent aim", Icon = Library.Icons.Crosshair })
+	rage:AddToggle({ Text = "Enabled", Flag = "rage_enabled" })
+	rage:AddSlider({ Text = "Hit chance", Flag = "rage_hc", Min = 0, Max = 100, Step = 1, Default = 100, Suffix = "%" })
+
+	local espBox = Visuals:AddTabbox()
+	local players = espBox:AddTab("Players", { Icon = Library.Icons.Users })
+	players:AddToggle({ Text = "Boxes", Flag = "esp_box", Default = true })
+	players:AddColorpicker({ Text = "Box color", Flag = "esp_box_color", Default = Color3.fromRGB(0, 240, 255) })
+	players:AddToggle({ Text = "Names", Default = true })
+	players:AddDropdown({ Text = "Box style", Options = { "Corner", "Full", "2D" }, Default = "Corner" })
+	local world = espBox:AddTab("World", { Icon = Library.Icons.Globe, Badge = 3 })
+	world:AddToggle({ Text = "Chams" })
+	world:AddSearchbar({ Placeholder = "Filter entities" })
+	local sf = world:AddScrollingFrame({ Height = 130 })
 	for i = 1, 12 do sf:AddToggle({ Text = "Entity " .. i }) end
 
-	local box = Visuals:AddTabbox()
-	local t1 = box:AddTab("Players")
-	t1:AddToggle({ Text = "Names" })
-	local t2 = box:AddTab("World", { Badge = 3 })
-	t2:AddToggle({ Text = "Chams" })
+	local misc = Misc:AddGroupbox({ Title = "Movement", Icon = Library.Icons.Zap })
+	misc:AddToggle({ Text = "Bunny hop" })
+	misc:AddSlider({ Text = "Walk speed", Min = 16, Max = 120, Step = 1, Default = 16 })
+	misc:AddKeybind({ Text = "Speed key", Default = Enum.KeyCode.LeftShift, Mode = "Hold" })
 
-	local cfg = Settings:AddGroupbox("Configuration")
-	cfg:AddButton({ Text = "Save config", Callback = function() Library:SaveConfig("default") end })
-	cfg:AddButton({ Text = "Load config", Callback = function() Library:LoadConfig("default") end })
-	cfg:AddColorpicker({ Text = "UI accent", Default = Library.Theme.Accent, Callback = function(c) Library:SetAccent(c) end })
-	cfg:AddButton({ Text = "Unload", Callback = function() Library:Unload() end })
-
+	Library:CreateSettingsTab(Window)
 	Library:Notify({ Title = "Loaded", Text = "SkeetwareUI v" .. Library.Version, Type = "success" })
 end
 
