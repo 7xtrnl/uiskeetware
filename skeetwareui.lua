@@ -61,25 +61,25 @@ local Library = {
 		Accent       = Color3.fromRGB(122, 106, 214),
 		AccentDark   = Color3.fromRGB(84, 72, 152),
 		Background   = Color3.fromRGB(18, 18, 18),
-		BackgroundAlt= Color3.fromRGB(22, 22, 26),
-		Gradient1    = Color3.fromRGB(36, 36, 42),
-		Gradient2    = Color3.fromRGB(18, 18, 22),
-		Panel        = Color3.fromRGB(28, 28, 30),
-		Element      = Color3.fromRGB(35, 35, 40),
-		ElementHover = Color3.fromRGB(48, 48, 55),
+		BackgroundAlt= Color3.fromRGB(22, 22, 22),
+		Gradient1    = Color3.fromRGB(36, 36, 38),
+		Gradient2    = Color3.fromRGB(18, 18, 19),
+		Panel        = Color3.fromRGB(26, 26, 26),
+		Element      = Color3.fromRGB(33, 33, 33),
+		ElementHover = Color3.fromRGB(41, 41, 41),
 		Border       = Color3.fromRGB(10, 10, 10),
-		Text         = Color3.fromRGB(210, 210, 215),
-		TextDim      = Color3.fromRGB(120, 120, 130),
+		Text         = Color3.fromRGB(202, 202, 202),
+		TextDim      = Color3.fromRGB(122, 122, 122),
 		Risky        = Color3.fromRGB(196, 76, 76),
 		Good         = Color3.fromRGB(120, 176, 96),
-		Font         = Enum.Font.GothamMedium,
-		FontBold     = Enum.Font.GothamBold,
+		Font         = Enum.Font.Arial,
+		FontBold     = Enum.Font.ArialBold,
 		TextSize     = 12,
 		-- Spacing scale (used across every container for consistent padding).
-		PadOuter     = 12,
-		PadInner     = 10,
-		GapRow       = 6,
-		GapBox       = 10,
+		PadOuter     = 8,
+		PadInner     = 6,
+		GapRow       = 4,
+		GapBox       = 6,
 	},
 	-- Built-in icon set (Roblox asset ids) so tabs/groupboxes/buttons can use
 	-- icons without hunting for asset ids: Library.Icons.Target etc.
@@ -149,9 +149,9 @@ function Util.Create(class, props, children)
 end
 local New = Util.Create
 
--- Sharp window frame, rounded inner elements — the premium cheat UI signature.
+-- Skeetware is 100% square: every corner is hard, no exceptions.
 function Util.Corner(radius, parent)
-	return New("UICorner", { CornerRadius = UDim.new(0, radius or 0), Parent = parent })
+	return New("UICorner", { CornerRadius = UDim.new(0, 0), Parent = parent })
 end
 
 function Util.Stroke(parent, color, thickness, transparency)
@@ -207,19 +207,14 @@ function Util.Shadow(parent, size, transparency)
 	return s
 end
 
--- Subtle accent glow using the 9-slice shadow asset recolored.
+-- Neon glow disabled: kept as a stub so call sites stay valid.
 function Util.Glow(parent, color, transparency)
 	return New("ImageLabel", {
 		Name = "Glow",
 		BackgroundTransparency = 1,
-		Image = "rbxassetid://6014261993",
-		ImageColor3 = color or Library.Theme.Accent,
-		ImageTransparency = transparency or 1,
-		ScaleType = Enum.ScaleType.Slice,
-		SliceCenter = Rect.new(49, 49, 450, 450),
-		AnchorPoint = Vector2.new(0.5, 0.5),
-		Position = UDim2.fromScale(0.5, 0.5),
-		Size = UDim2.new(1, 8, 1, 8),
+		ImageTransparency = 1,
+		Visible = false,
+		Size = UDim2.fromScale(1, 1),
 		ZIndex = 0,
 		Parent = parent,
 	})
@@ -401,14 +396,14 @@ function Library:Notify(opts)
 		Parent = NotifHolder,
 		ClipsDescendants = false,
 	})
-	Util.Corner(6, card)
+	Util.Corner(8, card)
 	Util.Stroke(card, T.Border, 1, 0.2)
 	Util.Shadow(card, 34, 0.55)
 	Util.Gradient(card, T.Gradient1, T.Gradient2, 30)
 	Util.Sheen(card, 0.06)
 
 	local bar = New("Frame", {
-		Size = UDim2.new(0, 4, 1, -12),
+		Size = UDim2.new(0, 3, 1, -12),
 		Position = UDim2.fromOffset(8, 6),
 		BackgroundColor3 = accent,
 		BorderSizePixel = 0,
@@ -506,7 +501,7 @@ local function ripple(button, x, y)
 	})
 	Util.Corner(999, rip)
 	local target = math.max(button.AbsoluteSize.X, button.AbsoluteSize.Y) * 2
-	Util.Tween(rip, { Size = UDim2.fromOffset(target, target), BackgroundTransparency = 1 }, TweenInfo.new(0.55, Enum.EasingStyle.Quad, Enum.EasingDirection.Out))
+	Util.Tween(rip, { Size = UDim2.fromOffset(target, target), BackgroundTransparency = 1 }, TweenInfo.new(0.45, Enum.EasingStyle.Quad, Enum.EasingDirection.Out))
 	task.delay(0.5, function() rip:Destroy() end)
 end
 
@@ -600,7 +595,7 @@ function Container:AddButton(opts)
 	local self_ = self
 
 	local btn = New("TextButton", {
-		Size = UDim2.new(1, 0, 0, opts.Height or 32),
+		Size = UDim2.new(1, 0, 0, opts.Height or 30),
 		BackgroundColor3 = T.Element,
 		BackgroundTransparency = 0.1,
 		AutoButtonColor = false,
@@ -743,7 +738,7 @@ function Container:AddToggle(opts)
 	local track = New("TextButton", {
 		AnchorPoint = Vector2.new(1, 0.5),
 		Position = UDim2.new(1, 0, 0.5, 0),
-		Size = UDim2.fromOffset(42, 20),
+		Size = UDim2.fromOffset(38, 18),
 		BackgroundColor3 = T.Element,
 		AutoButtonColor = false,
 		Text = "",
@@ -754,7 +749,7 @@ function Container:AddToggle(opts)
 	local glow = Util.Glow(track, T.Accent, 1)
 
 	local knob = New("Frame", {
-		Size = UDim2.fromOffset(16, 16),
+		Size = UDim2.fromOffset(14, 14),
 		Position = UDim2.fromOffset(2, 2),
 		BackgroundColor3 = T.TextDim,
 		BorderSizePixel = 0,
@@ -764,7 +759,7 @@ function Container:AddToggle(opts)
 
 	local statusLight = New("Frame", {
 		AnchorPoint = Vector2.new(1, 0.5),
-		Position = UDim2.new(1, -50, 0.5, 0),
+		Position = UDim2.new(1, -46, 0.5, 0),
 		Size = UDim2.fromOffset(6, 6),
 		BackgroundColor3 = T.TextDim,
 		BorderSizePixel = 0,
@@ -774,7 +769,7 @@ function Container:AddToggle(opts)
 
 	local stateText = New("TextLabel", {
 		AnchorPoint = Vector2.new(1, 0.5),
-		Position = UDim2.new(1, -62, 0.5, 0),
+		Position = UDim2.new(1, -58, 0.5, 0),
 		Size = UDim2.fromOffset(28, 14),
 		BackgroundTransparency = 1,
 		Font = T.Font,
@@ -792,7 +787,7 @@ function Container:AddToggle(opts)
 	local function render(animate)
 		local on = obj.Value
 		local info = animate and TW_NORMAL or TweenInfo.new(0)
-		Util.Tween(knob, { Position = UDim2.fromOffset(on and 24 or 2, 2), BackgroundColor3 = on and Color3.new(1,1,1) or T.TextDim }, info)
+		Util.Tween(knob, { Position = UDim2.fromOffset(on and 22 or 2, 2), BackgroundColor3 = on and Color3.new(1,1,1) or T.TextDim }, info)
 		Util.Tween(track, { BackgroundColor3 = on and T.AccentDark or T.Element }, info)
 		Util.Tween(stroke, { Color = on and T.Accent or T.Border }, info)
 		Util.Tween(glow, { ImageTransparency = on and 0.6 or 1 }, info)
@@ -1119,7 +1114,7 @@ local function buildDropdown(self, opts, multi)
 	-- Popup list rendered at ScreenGui level so it floats above everything.
 	local popup = New("Frame", {
 		Visible = false, BackgroundColor3 = T.Panel, BackgroundTransparency = 0.04,
-		Size = UDim2.fromOffset(200, 0), ZIndex = 900, ClipsDescendants = true, Parent = Library.ScreenGui,
+		Size = UDim2.fromOffset(200, 0), ZIndex = 500, ClipsDescendants = true, Parent = Library.ScreenGui,
 	})
 	Util.Corner(6, popup); Util.Stroke(popup, T.Accent, 1, 0.55); Util.Shadow(popup, 40, 0.5)
 	Util.Gradient(popup, T.Gradient1, T.Gradient2, 30)
@@ -1132,7 +1127,7 @@ local function buildDropdown(self, opts, multi)
 			Position = UDim2.fromOffset(6, 6), Size = UDim2.new(1, -12, 0, 22),
 			BackgroundColor3 = T.Element, BackgroundTransparency = 0.1, Font = T.Font,
 			PlaceholderText = "Search...", Text = "", TextColor3 = T.Text, TextSize = 12,
-			ClearTextOnFocus = false, ZIndex = 902, Parent = popup,
+			ClearTextOnFocus = false, ZIndex = 502, Parent = popup,
 		})
 		Util.Corner(4, searchBox); Util.Stroke(searchBox, T.Border, 1, 0.4); Util.Padding(searchBox, 0, 6, 0, 6)
 		listTop = 32
@@ -1144,7 +1139,7 @@ if multi and opts.SelectAll ~= false then
 		Position = UDim2.fromOffset(6, listTop),
 		Size = UDim2.new(1, -12, 0, 20),
 		BackgroundTransparency = 1,
-		ZIndex = 902,
+		ZIndex = 502,
 		Parent = popup,
 	})
 	local function mini(text, x, cb)
@@ -1158,7 +1153,7 @@ if multi and opts.SelectAll ~= false then
 			Text = text,
 			TextColor3 = T.Accent,
 			TextSize = 11,
-			ZIndex = 903,
+			ZIndex = 503,
 			Parent = toolbar,
 		})
 		Util.Corner(4, b)
@@ -1175,7 +1170,7 @@ end
 		Position = UDim2.fromOffset(4, listTop), Size = UDim2.new(1, -8, 1, -listTop - 4),
 		BackgroundTransparency = 1, BorderSizePixel = 0, ScrollBarThickness = 3,
 		ScrollBarImageColor3 = T.Accent, CanvasSize = UDim2.new(), AutomaticCanvasSize = Enum.AutomaticSize.Y,
-		ZIndex = 902, Parent = popup,
+		ZIndex = 502, Parent = popup,
 	})
 	Library:RegisterThemed(scroll, "ScrollBarImageColor3", "Accent")
 	Util.List(scroll, 2)
@@ -1304,7 +1299,7 @@ end
 				local row = New("TextButton", {
 					Size = UDim2.new(1, 0, 0, 24), BackgroundColor3 = selected and T.AccentDark or T.Element,
 					BackgroundTransparency = selected and 0.35 or 0.5, AutoButtonColor = false, Text = "",
-					LayoutOrder = i, ZIndex = 903, Parent = scroll,
+					LayoutOrder = i, ZIndex = 503, Parent = scroll,
 				})
 				Util.Corner(4, row)
 				if selected then Util.Stroke(row, T.Accent, 1, 0.4) end
@@ -1313,11 +1308,11 @@ end
 				if multi then
 					local cb = New("Frame", {
 						Position = UDim2.fromOffset(6, 6), Size = UDim2.fromOffset(12, 12),
-						BackgroundColor3 = selected and T.Accent or T.Element, BorderSizePixel = 0, ZIndex = 904, Parent = row,
+						BackgroundColor3 = selected and T.Accent or T.Element, BorderSizePixel = 0, ZIndex = 504, Parent = row,
 					})
 					Util.Corner(3, cb); Util.Stroke(cb, selected and T.Accent or T.Border, 1, 0.2)
 					if selected then
-						New("TextLabel", { BackgroundTransparency = 1, Size = UDim2.fromScale(1,1), Font = T.FontBold, Text = "*", TextColor3 = Color3.new(0,0,0), TextSize = 12, ZIndex = 905, Parent = cb })
+						New("TextLabel", { BackgroundTransparency = 1, Size = UDim2.fromScale(1,1), Font = T.FontBold, Text = "*", TextColor3 = Color3.new(0,0,0), TextSize = 12, ZIndex = 505, Parent = cb })
 					end
 					x = 24
 				end
@@ -1328,7 +1323,7 @@ end
 				New("TextLabel", {
 					BackgroundTransparency = 1, Position = UDim2.fromOffset(x, 0), Size = UDim2.new(1, -x - 6, 1, 0),
 					Font = T.Font, Text = text, TextColor3 = selected and T.Accent or T.Text, TextSize = 12,
-					TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 904, Parent = row,
+					TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 504, Parent = row,
 				})
 
 				row.MouseButton1Click:Connect(function()
@@ -1356,15 +1351,9 @@ end
 		self.Open = true
 		buildRows(searchBox and searchBox.Text or "")
 		popup.Visible = true
-		-- Smart positioning: flip upward if popup would go below screen
-		local popupH = popupHeight()
-		local screenH = Library.ScreenGui.AbsoluteSize.Y
-		local belowY = button.AbsolutePosition.Y + button.AbsoluteSize.Y + 4
-		local aboveY = button.AbsolutePosition.Y - popupH - 4
-		local useY = (belowY + popupH > screenH - 10 and aboveY > 0) and aboveY or belowY
-		popup.Position = UDim2.fromOffset(button.AbsolutePosition.X, useY)
+		popup.Position = UDim2.fromOffset(button.AbsolutePosition.X, button.AbsolutePosition.Y + button.AbsoluteSize.Y + 4)
 		popup.Size = UDim2.fromOffset(button.AbsoluteSize.X, 0)
-		Util.Tween(popup, { Size = UDim2.fromOffset(button.AbsoluteSize.X, popupH) }, TW_NORMAL)
+		Util.Tween(popup, { Size = UDim2.fromOffset(button.AbsoluteSize.X, popupHeight()) }, TW_NORMAL)
 		Util.Tween(arrow, { Rotation = 180 }, TW_NORMAL)
 		Util.Tween(stroke, { Color = T.Accent, Transparency = 0.1 }, TW_FAST)
 	end
@@ -1373,7 +1362,7 @@ end
 		Util.Tween(popup, { Size = UDim2.fromOffset(popup.AbsoluteSize.X, 0) }, TW_FAST)
 		Util.Tween(arrow, { Rotation = 0 }, TW_NORMAL)
 		Util.Tween(stroke, { Color = T.Border, Transparency = 0.25 }, TW_FAST)
-		task.delay(0.22, function() if not self.Open then popup.Visible = false end end)
+		task.delay(0.15, function() if not self.Open then popup.Visible = false end end)
 	end
 	function obj:Toggle() if self.Open then self:Close() else self:Open_() end end
 	function obj:Destroy() popup:Destroy() holder:Destroy() end
@@ -1830,10 +1819,10 @@ function Container:AddGroupbox(titleOrOpts, maybeOpts)
 	Util.Sheen(box, 0.06)
 
 	local header = New("TextButton", {
-		Size = UDim2.new(1, 0, 0, 40), BackgroundTransparency = 1, AutoButtonColor = false, Text = "", Parent = box,
+		Size = UDim2.new(1, 0, 0, 36), BackgroundTransparency = 1, AutoButtonColor = false, Text = "", Parent = box,
 	})
 	local accentBar = New("Frame", {
-		AnchorPoint = Vector2.new(0, 0.5), Position = UDim2.new(0, 12, 0.5, 0), Size = UDim2.fromOffset(3, 16),
+		AnchorPoint = Vector2.new(0, 0.5), Position = UDim2.new(0, 12, 0.5, 0), Size = UDim2.fromOffset(3, 13),
 		BackgroundColor3 = T.Accent, BorderSizePixel = 0, Parent = header,
 	})
 	Util.Corner(2, accentBar)
@@ -1860,11 +1849,11 @@ function Container:AddGroupbox(titleOrOpts, maybeOpts)
 	})
 	local headerDivider = New("Frame", {
 		Position = UDim2.new(0, 12, 1, 0), Size = UDim2.new(1, -24, 0, 1),
-		BackgroundColor3 = T.Border, BackgroundTransparency = 0.35, BorderSizePixel = 0, Parent = header,
+		BackgroundColor3 = T.Border, BackgroundTransparency = 0.55, BorderSizePixel = 0, Parent = header,
 	})
 
 	local body = New("Frame", {
-		Position = UDim2.fromOffset(0, 40), Size = UDim2.new(1, 0, 0, 0),
+		Position = UDim2.fromOffset(0, 36), Size = UDim2.new(1, 0, 0, 0),
 		AutomaticSize = Enum.AutomaticSize.Y, BackgroundTransparency = 1, ClipsDescendants = false, Parent = box,
 	})
 	Util.Padding(body, 12, 12, 12, 12)
@@ -1883,7 +1872,7 @@ function Container:AddGroupbox(titleOrOpts, maybeOpts)
 		box.AutomaticSize = Enum.AutomaticSize.Y
 		if self.Collapsed then
 			box.AutomaticSize = Enum.AutomaticSize.None
-			box.Size = UDim2.new(1, 0, 0, 40)
+			box.Size = UDim2.new(1, 0, 0, 36)
 		end
 		Util.Tween(chevron, { Rotation = self.Collapsed and -90 or 0 }, TW_NORMAL)
 	end
@@ -1919,7 +1908,7 @@ function Container:AddTabbox(opts)
 
 	-- Segmented pill strip (skeet-style) instead of a bare underline row.
 	local stripHolder = New("Frame", {
-		Size = UDim2.new(1, -24, 0, 34), Position = UDim2.fromOffset(12, 12),
+		Size = UDim2.new(1, -24, 0, 30), Position = UDim2.fromOffset(12, 12),
 		BackgroundColor3 = T.BackgroundAlt, BackgroundTransparency = 0.25, Parent = box,
 	})
 	Util.Corner(8, stripHolder)
@@ -1930,7 +1919,7 @@ function Container:AddTabbox(opts)
 	Util.List(strip, 4, Enum.FillDirection.Horizontal)
 
 	local bodies = New("Frame", {
-		Position = UDim2.fromOffset(0, 50), Size = UDim2.new(1, 0, 0, 0),
+		Position = UDim2.fromOffset(0, 46), Size = UDim2.new(1, 0, 0, 0),
 		AutomaticSize = Enum.AutomaticSize.Y, BackgroundTransparency = 1, Parent = box,
 	})
 
@@ -1971,7 +1960,7 @@ function Container:AddTabbox(opts)
 			end
 			body.Visible = true
 			label.TextColor3 = T.Text
-			Util.Tween(btn, { BackgroundTransparency = 0.05, BackgroundColor3 = T.AccentDark }, TW_FAST)
+			Util.Tween(btn, { BackgroundTransparency = 0.15 }, TW_FAST)
 			if sub.IconImage then Util.Tween(sub.IconImage, { ImageColor3 = T.Accent }, TW_FAST) end
 			tabbox.Current = sub
 		end
@@ -2039,7 +2028,7 @@ function Library:CreateWindow(opts)
 		ClipsDescendants = false,
 		Parent = self.ScreenGui,
 	})
-	Util.Corner(2, main)
+	Util.Corner(10, main)
 	Util.Stroke(main, Color3.fromRGB(8, 8, 8), 1, 0)
 	-- inner light bevel line, the classic skeet double border
 	local bevel = New("Frame", {
@@ -2056,14 +2045,14 @@ function Library:CreateWindow(opts)
 	}), 0.94)
 	local glassOverlay = main:FindFirstChild("GlassOverlay")
 if glassOverlay then
-	Util.Corner(2, glassOverlay)
+	Util.Corner(10, glassOverlay)
 end
 
 	-- Header
 	local header = New("Frame", {
 		Name = "Header", Size = UDim2.new(1, 0, 0, 26), BackgroundColor3 = T.Panel, BackgroundTransparency = 0, Parent = main,
 	})
-	Util.Corner(2, header)
+	Util.Corner(10, header)
 	Util.Gradient(header, T.Gradient2, T.Gradient1, 0)
 	Util.Sheen(header, 0.06)
 	New("Frame", { Position = UDim2.new(0, 0, 1, -2), Size = UDim2.new(1, 0, 0, 2), BackgroundColor3 = T.Panel, BackgroundTransparency = 0, BorderSizePixel = 0, Parent = header })
@@ -2073,18 +2062,13 @@ end
 		BackgroundColor3 = T.Accent, BorderSizePixel = 0, Parent = header,
 	})
 	Library:RegisterThemed(accentLine, "BackgroundColor3", "Accent")
-	local accentGrad = New("UIGradient", {
+	New("UIGradient", {
 		Color = ColorSequence.new(T.Accent),
 		Transparency = NumberSequence.new({
 			NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(0.5, 0.2), NumberSequenceKeypoint.new(1, 1),
 		}),
 		Parent = accentLine,
 	})
-	-- Animated shimmer sweep on the accent line
-	Library:Connect(RunService.RenderStepped, function()
-		local t = tick() % 3 / 3
-		accentGrad.Offset = Vector2.new(math.sin(t * math.pi * 2) * 0.35, 0)
-	end)
 
 	local logo = New("Frame", {
 		AnchorPoint = Vector2.new(0, 0.5), Position = UDim2.new(0, 8, 0.5, 0), Size = UDim2.fromOffset(6, 6),
@@ -2131,11 +2115,10 @@ end
 	-- Sidebar tab navigation
 	local sidebar = New("Frame", {
 		Name = "Sidebar", Size = UDim2.new(0, 168, 1, 0),
-		BackgroundColor3 = T.BackgroundAlt, BackgroundTransparency = 0.1,
+		BackgroundColor3 = T.BackgroundAlt, BackgroundTransparency = 0.25,
 		ClipsDescendants = true, Parent = body,
 	})
-	Util.Gradient(sidebar, Color3.fromRGB(28, 28, 33), Color3.fromRGB(20, 20, 24), 90)
-	New("Frame", { AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, 0, 0, 0), Size = UDim2.new(0, 1, 1, 0), BackgroundColor3 = T.Border, BackgroundTransparency = 0.35, BorderSizePixel = 0, ZIndex = 3, Parent = sidebar })
+	New("Frame", { AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, 0, 0, 0), Size = UDim2.new(0, 1, 1, 0), BackgroundColor3 = T.Border, BackgroundTransparency = 0.5, BorderSizePixel = 0, ZIndex = 3, Parent = sidebar })
 
 	local navList = New("Frame", {
 		Name = "Nav", Size = UDim2.new(1, 0, 1, -34), BackgroundTransparency = 1, Parent = sidebar,
@@ -2147,7 +2130,7 @@ end
 		BackgroundTransparency = 1, AnchorPoint = Vector2.new(0, 1), Position = UDim2.new(0, 14, 1, -12),
 		Size = UDim2.new(1, -28, 0, 14), Font = T.Font,
 		Text = (opts.Footer or "skeetware.cc") .. "  •  " .. Util.KeyName(opts.ToggleKey or self.ToggleKey),
-		TextColor3 = T.TextDim, TextSize = 11, TextXAlignment = Enum.TextXAlignment.Left,
+		TextColor3 = T.TextDim, TextSize = 10, TextXAlignment = Enum.TextXAlignment.Left,
 		TextTransparency = 0.25, Parent = sidebar,
 	})
 
@@ -2160,12 +2143,12 @@ end
 	function window:AddTab(name, icon)
 		local T = Library.Theme
 		local btn = New("TextButton", {
-			Size = UDim2.new(1, 0, 0, 38), BackgroundColor3 = T.Element, BackgroundTransparency = 1,
+			Size = UDim2.new(1, 0, 0, 34), BackgroundColor3 = T.Element, BackgroundTransparency = 1,
 			AutoButtonColor = false, Text = "", Parent = navList,
 		})
 		Util.Corner(7, btn)
 		local marker = New("Frame", {
-			AnchorPoint = Vector2.new(0, 0.5), Position = UDim2.new(0, 0, 0.5, 0), Size = UDim2.fromOffset(3, 20),
+			AnchorPoint = Vector2.new(0, 0.5), Position = UDim2.new(0, 0, 0.5, 0), Size = UDim2.fromOffset(3, 16),
 			BackgroundColor3 = T.Accent, BackgroundTransparency = 1, BorderSizePixel = 0, Parent = btn,
 		})
 		Util.Corner(2, marker)
@@ -2194,15 +2177,15 @@ end
 			AutomaticCanvasSize = Enum.AutomaticSize.Y, Parent = pageHolder,
 		})
 		Library:RegisterThemed(page, "ScrollBarImageColor3", "Accent")
-		Util.Padding(page, 18, 16, 18, 18)
+		Util.Padding(page, 16, 14, 16, 16)
 		New("UIListLayout", {
-			FillDirection = Enum.FillDirection.Horizontal, Padding = UDim.new(0, 14),
+			FillDirection = Enum.FillDirection.Horizontal, Padding = UDim.new(0, 12),
 			SortOrder = Enum.SortOrder.LayoutOrder, Parent = page,
 		})
 
 		local function makeColumn()
-			local col = New("Frame", { Size = UDim2.new(0.5, -7, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, BackgroundTransparency = 1, Parent = page })
-			Util.List(col, 14)
+			local col = New("Frame", { Size = UDim2.new(0.5, -6, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, BackgroundTransparency = 1, Parent = page })
+			Util.List(col, 12)
 			return col
 		end
 		local left, right = makeColumn(), makeColumn()
@@ -2237,7 +2220,7 @@ end
 			page.Visible = true
 			page.Position = UDim2.fromOffset(0, 8)
 			Util.Tween(page, { Position = UDim2.fromOffset(0, 0) }, TW_SLOW)
-			Util.Tween(btn, { BackgroundTransparency = 0.55 }, TW_FAST)
+			Util.Tween(btn, { BackgroundTransparency = 0.72 }, TW_FAST)
 			Util.Tween(marker, { BackgroundTransparency = 0 }, TW_FAST)
 			label.TextColor3 = T.Text
 			if iconImg then Util.Tween(iconImg, { ImageColor3 = T.Accent }, TW_FAST) end
